@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use chrono::Utc;
 use finance_query_core::{FetchClient, YahooAuthManager, YahooError, YahooFinanceClient};
 use serde_json::Value;
 
