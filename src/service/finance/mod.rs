@@ -116,6 +116,26 @@ impl FinanceService {
         })
     }
 
+    /// Fetch raw fundamentals timeseries for a symbol and frequency.
+    pub async fn get_fundamentals_raw(
+        &self,
+        symbol: &str,
+        statement_type: StatementType,
+        frequency: Frequency,
+        years_back: i64,
+    ) -> Result<Value, FinanceServiceError> {
+        let data = fundamentals::fetch_fundamentals_timeseries(
+            self.client.as_ref(),
+            symbol,
+            statement_type,
+            frequency,
+            years_back,
+        )
+        .await?;
+
+        Ok(data)
+    }
+
 }
 
 /// Extract the first simple quote from the Yahoo response into our bot-facing struct.

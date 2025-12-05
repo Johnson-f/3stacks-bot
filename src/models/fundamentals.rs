@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Matches finance-query-core statement types for fundamentals timeseries.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum StatementType {
     #[serde(rename = "income")]
@@ -24,7 +24,7 @@ impl StatementType {
 }
 
 /// Matches finance-query-core frequencies for statements.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Frequency {
     #[serde(rename = "annual")]
