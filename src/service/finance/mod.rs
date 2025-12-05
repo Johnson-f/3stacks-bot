@@ -9,6 +9,7 @@ use crate::models::{
 
 pub mod fundamentals;
 pub mod holders;
+pub mod options;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FinanceServiceError {

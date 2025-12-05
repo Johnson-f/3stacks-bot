@@ -9,6 +9,7 @@ use serenity::all::{
 use serenity::{async_trait, model::gateway::Ready, prelude::*, Client};
 use tracing::info;
 
+use Discord_bot::service::automation::options_data;
 use Discord_bot::service::command::fundamentals as fundamentals_cmd;
 use Discord_bot::service::command::holders as holders_cmd;
 use Discord_bot::service::command::quotes as quotes_cmd;
@@ -47,6 +48,9 @@ impl EventHandler for Handler {
             let _ = Command::create_global_command(&ctx.http, holders_cmd::register_command()).await;
             info!("{} is connected. Global commands registered (may take up to 1 hour).", ready.user.name);
         }
+
+        // Start SPY options pinger (every 15 minutes) if configured
+        options_data::spawn_options_pinger(ctx.http.clone(), self.finance.clone());
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
