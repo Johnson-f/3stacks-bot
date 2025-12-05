@@ -1,0 +1,66 @@
+[package]
+name = "Discord-bot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Discord library with all necessary features
+serenity = { version = "0.12.4", default-features = false, features = [
+    "builder",           # Core client functionality
+    "cache",          # Gateway connection
+    "collector",   # TLS backend for secure connections
+    "client",            # Discord data models
+    "framework",            # Caching for better performance
+    "gateway",        # Command framework
+    "http", # Standard command parsing
+    "model",            # Voice support (if needed later)
+    "standard_framework",        # Event collectors
+    "utils",            # Utility functions
+    "voice",
+    "rustls_backend",
+    "chrono",
+    "interactions_endpoint",
+] }
+
+# Async runtime with all features
+tokio = { version = "1.48.0", features = [
+    "macros",           # Async macros like #[tokio::main]
+    "rt-multi-thread",  # Multi-threaded runtime
+    "time",             # Time utilities for delays/intervals
+    "sync",             # Synchronization primitives
+    "fs",               # Async file operations
+] }
+
+# HTTP client for API calls
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Environment variables
+dotenv = "0.15"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0.17"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Date/time handling for financial data
+chrono = { version = "0.4", features = ["serde"] }
+
+# For WebSocket streaming (real-time quotes)
+tokio-tungstenite = { version = "0.28", features = ["rustls-tls-native-roots"] }
+futures-util = "0.3"
+
+# For fetching stock market related data 
+finance-query-core = "0.2.1"
+
+# Optional: Database support
+# sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
+
+# Optional: Rate limiting
+# governor = "0.6"
