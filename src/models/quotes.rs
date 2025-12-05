@@ -12,4 +12,3 @@ pub struct PriceQuote {
     pub pre_market_price: Option<f64>,
     pub after_hours_price: Option<f64>,
 }
-
