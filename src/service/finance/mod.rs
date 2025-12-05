@@ -3,9 +3,12 @@ use std::sync::Arc;
 use finance_query_core::{FetchClient, YahooAuthManager, YahooError, YahooFinanceClient};
 use serde_json::Value;
 
-use crate::models::{FinancialSummary, PriceQuote, Frequency, StatementType};
+use crate::models::{
+    FinancialSummary, Frequency, HolderType, HoldersOverview, PriceQuote, StatementType,
+};
 
 pub mod fundamentals;
+pub mod holders;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FinanceServiceError {
@@ -133,6 +136,17 @@ impl FinanceService {
         )
         .await?;
 
+        Ok(data)
+    }
+
+    /// Fetch holders data for a symbol for a specific holder type.
+    pub async fn get_holders(
+        &self,
+        symbol: &str,
+        holder_type: HolderType,
+    ) -> Result<HoldersOverview, FinanceServiceError> {
+        let data =
+            holders::fetch_holders(self.client.as_ref(), symbol, holder_type).await?;
         Ok(data)
     }
 

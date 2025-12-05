@@ -10,6 +10,7 @@ use serenity::{async_trait, model::gateway::Ready, prelude::*, Client};
 use tracing::info;
 
 use Discord_bot::service::command::fundamentals as fundamentals_cmd;
+use Discord_bot::service::command::holders as holders_cmd;
 use Discord_bot::service::command::quotes as quotes_cmd;
 use Discord_bot::service::finance::FinanceService;
 use Discord_bot::models::StatementType;
@@ -34,14 +35,16 @@ impl EventHandler for Handler {
             let _ = guild_id.create_command(&ctx.http, fundamentals_cmd::register_command(StatementType::BalanceSheet)).await;
             let _ = guild_id.create_command(&ctx.http, fundamentals_cmd::register_command(StatementType::CashFlow)).await;
             let _ = guild_id.create_command(&ctx.http, quotes_cmd::register_command()).await;
+            let _ = guild_id.create_command(&ctx.http, holders_cmd::register_command()).await;
             info!("{} is connected. Guild commands registered instantly for testing.", ready.user.name);
         } else {
             // Fallback to global commands (takes up to 1 hour)
-            let _ = Command::create_global_command(&ctx.http, ping_command()).await;
+        let _ = Command::create_global_command(&ctx.http, ping_command()).await;
             let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::IncomeStatement)).await;
             let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::BalanceSheet)).await;
             let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::CashFlow)).await;
             let _ = Command::create_global_command(&ctx.http, quotes_cmd::register_command()).await;
+            let _ = Command::create_global_command(&ctx.http, holders_cmd::register_command()).await;
             info!("{} is connected. Global commands registered (may take up to 1 hour).", ready.user.name);
         }
     }
@@ -99,6 +102,26 @@ impl EventHandler for Handler {
                         )
                         .await;
                 }
+                "holders" => {
+                    let _ = command
+                        .create_response(
+                            &ctx.http,
+                            CreateInteractionResponse::Defer(Default::default()),
+                        )
+                        .await;
+
+                    let content = match holders_cmd::handle(&command, &self.finance).await {
+                        Ok(msg) => msg,
+                        Err(err) => format!("❌ {}", err),
+            };
+
+            let _ = command
+                        .edit_response(
+                            &ctx.http,
+                            serenity::all::EditInteractionResponse::new().content(content),
+                        )
+                        .await;
+                }
                 _ => {
                     let _ = command
                         .create_response(
@@ -108,7 +131,7 @@ impl EventHandler for Handler {
                                     .content("Command not implemented."),
                             ),
                         )
-                        .await;
+                .await;
                 }
             }
         }

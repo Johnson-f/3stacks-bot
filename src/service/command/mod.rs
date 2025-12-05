@@ -1,3 +1,4 @@
 pub mod fundamentals;
 pub mod quotes;
+pub mod holders;
 
