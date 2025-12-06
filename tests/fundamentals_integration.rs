@@ -1,7 +1,7 @@
 use finance_query_core::{FetchClient, YahooAuthManager, YahooFinanceClient};
 use serde_json::to_string_pretty;
-use std::{fs, path::Path};
 use std::sync::Arc;
+use std::{fs, path::Path};
 use Discord_bot::models::{Frequency, StatementType};
 use Discord_bot::service::finance::fundamentals::fetch_fundamentals_timeseries;
 
@@ -80,4 +80,3 @@ async fn fetches_live_fundamentals_timeseries() -> Result<(), Box<dyn std::error
 
     Ok(())
 }
-

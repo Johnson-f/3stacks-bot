@@ -29,13 +29,21 @@ pub fn parse_timestamp(value: &serde_json::Value) -> Option<DateTime<Utc>> {
 }
 
 pub fn value_to_i64(value: &serde_json::Value) -> Option<i64> {
-    value.get("raw").and_then(|r| r.as_i64()).or_else(|| value.as_i64())
+    value
+        .get("raw")
+        .and_then(|r| r.as_i64())
+        .or_else(|| value.as_i64())
 }
 
 pub fn value_to_f64(value: &serde_json::Value) -> Option<f64> {
-    value.get("raw").and_then(|r| r.as_f64()).or_else(|| value.as_f64())
+    value
+        .get("raw")
+        .and_then(|r| r.as_f64())
+        .or_else(|| value.as_f64())
 }
 
-pub fn object_to_map(obj: &serde_json::Map<String, serde_json::Value>) -> HashMap<String, serde_json::Value> {
+pub fn object_to_map(
+    obj: &serde_json::Map<String, serde_json::Value>,
+) -> HashMap<String, serde_json::Value> {
     obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
 }

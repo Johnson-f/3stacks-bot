@@ -4,7 +4,14 @@ use tokio::time::{timeout, Duration};
 use tracing::{error, info, warn};
 
 use crate::models::EarningsEvent;
+use crate::service::automation::earnings_calendar;
 use crate::service::finance::FinanceService;
+
+/// Response payload for the /earnings command.
+pub struct EarningsResponse {
+    pub content: String,
+    pub image: Option<Vec<u8>>,
+}
 
 pub fn register_command() -> CreateCommand {
     CreateCommand::new("earnings").description("Next 7 days of earnings for watchlist symbols")
@@ -13,18 +20,18 @@ pub fn register_command() -> CreateCommand {
 pub async fn handle(
     _command: &CommandInteraction,
     finance: &FinanceService,
-) -> Result<String, String> {
+) -> Result<EarningsResponse, String> {
     info!("Starting earnings command handler");
-    
+
     let start = Utc::now().date_naive();
     let end = start + chrono::Duration::days(7);
 
     info!("Fetching earnings from {} to {}", start, end);
-    
+
     // Wrap the entire fetch in a timeout
     let events = match timeout(
         Duration::from_secs(20), // 20 second total timeout
-        finance.get_earnings_range(start, end)
+        finance.get_earnings_range(start, end),
     )
     .await
     {
@@ -44,25 +51,53 @@ pub async fn handle(
 
     if events.is_empty() {
         info!("No earnings found in the next 7 days");
-        return Ok("No earnings within the next 7 days.".to_string());
+        return Ok(EarningsResponse {
+            content: "No earnings within the next 7 days.".to_string(),
+            image: None,
+        });
     }
 
     info!("Formatting output for {} events", events.len());
     let output = format_output(&events);
-    
-    // Discord has a 2000 character limit
-    if output.len() > 1900 {
-        warn!("Output is {} characters, truncating to fit Discord limit", output.len());
-        let truncated = format!(
-            "{}\n\n⚠️ *Message truncated - showing first {} of {} events. Use filters to see more.*",
-            &output[..1800],
-            output.matches("📈").count().min(30),
-            events.len()
-        );
-        Ok(truncated)
-    } else {
-        info!("Output is {} characters, within Discord limit", output.len());
-        Ok(output)
+    let summary = format!(
+        "📊 Earnings Calendar (next 7 days) — {} events",
+        events.len()
+    );
+
+    match earnings_calendar::render_calendar_image(&events).await {
+        Ok(bytes) => Ok(EarningsResponse {
+            content: summary,
+            image: Some(bytes),
+        }),
+        Err(err) => {
+            warn!("Falling back to text earnings calendar: {}", err);
+
+            // Discord has a 2000 character limit
+            let content = if output.len() > 1900 {
+                warn!(
+                    "Output is {} characters, truncating to fit Discord limit",
+                    output.len()
+                );
+                format!(
+                    "{}\n\n⚠️ *Message truncated - showing first {} of {} events. Use filters to see more.*\n⚠️ Image render unavailable: {}",
+                    &output[..1800],
+                    output.matches("📈").count().min(30),
+                    events.len(),
+                    err
+                )
+            } else {
+                info!(
+                    "Output is {} characters, within Discord limit",
+                    output.len()
+                );
+                format!("{}\n\n⚠️ Image render unavailable: {}", output, err)
+            };
+
+            Ok(EarningsResponse {
+                content,
+                image: None,
+            })
+        }
     }
 }
 
@@ -91,24 +126,20 @@ pub fn format_output(events: &[EarningsEvent]) -> String {
             Some(t) => t,
             None => "TBA",
         };
-        
+
         let emoji = event.emoji.as_deref().unwrap_or("📈");
         let importance_indicator = match event.importance {
             Some(5) => " 🔥",
             Some(4) => " ⭐",
             _ => "",
         };
-        
+
         // Compact format: emoji symbol date (time) importance
         let line = format!(
-            "{} **{}** {} ({}){}", 
-            emoji, 
-            event.symbol, 
-            date_str, 
-            tod,
-            importance_indicator
+            "{} **{}** {} ({}){}",
+            emoji, event.symbol, date_str, tod, importance_indicator
         );
-        
+
         lines.push(line);
     }
 

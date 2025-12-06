@@ -74,14 +74,10 @@ pub fn register_command(statement_type: StatementType) -> CreateCommand {
             "income",
             "Get income statement metrics (annual or quarterly)",
         ),
-        StatementType::BalanceSheet => (
-            "balance",
-            "Get balance sheet metrics (annual or quarterly)",
-        ),
-        StatementType::CashFlow => (
-            "cashflow",
-            "Get cash flow metrics (annual or quarterly)",
-        ),
+        StatementType::BalanceSheet => {
+            ("balance", "Get balance sheet metrics (annual or quarterly)")
+        }
+        StatementType::CashFlow => ("cashflow", "Get cash flow metrics (annual or quarterly)"),
     };
 
     let metrics = get_metrics_for_statement(statement_type);
@@ -103,7 +99,7 @@ pub fn register_command(statement_type: StatementType) -> CreateCommand {
                 "Which metric to fetch",
             )
             .required(true);
-            
+
             // Limit to 25 choices (Discord's max)
             for m in metrics.iter().take(25) {
                 opt = opt.add_string_choice(m.label.clone(), m.slash_value.clone());
@@ -111,14 +107,10 @@ pub fn register_command(statement_type: StatementType) -> CreateCommand {
             opt
         })
         .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::String,
-                "freq",
-                "annual or quarterly",
-            )
-            .required(true)
-            .add_string_choice("Annual", "annual")
-            .add_string_choice("Quarterly", "quarterly"),
+            CreateCommandOption::new(CommandOptionType::String, "freq", "annual or quarterly")
+                .required(true)
+                .add_string_choice("Annual", "annual")
+                .add_string_choice("Quarterly", "quarterly"),
         )
         .add_option(
             CreateCommandOption::new(
@@ -175,15 +167,13 @@ pub async fn handle(
         return Err("quarter can only be used with quarterly frequency".into());
     }
 
-    let quarter_num = quarter
-        .as_deref()
-        .and_then(|q| match q {
-            "Q1" => Some(1),
-            "Q2" => Some(2),
-            "Q3" => Some(3),
-            "Q4" => Some(4),
-            _ => None,
-        });
+    let quarter_num = quarter.as_deref().and_then(|q| match q {
+        "Q1" => Some(1),
+        "Q2" => Some(2),
+        "Q3" => Some(3),
+        "Q4" => Some(4),
+        _ => None,
+    });
 
     let years_back = year
         .map(|y| {
@@ -246,9 +236,9 @@ fn select_metric(
         Frequency::Quarterly => "quarterly",
     };
 
-    let stmt = statements.iter().find(|s| {
-        s.statement_type == statement_type.as_str() && s.frequency == freq_str
-    })?;
+    let stmt = statements
+        .iter()
+        .find(|s| s.statement_type == statement_type.as_str() && s.frequency == freq_str)?;
 
     let metric_map = stmt.statement.get(metric)?;
 

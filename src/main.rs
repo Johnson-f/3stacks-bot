@@ -3,12 +3,14 @@ use std::{env, sync::Arc};
 use anyhow::Result;
 use dotenv::dotenv;
 use serenity::all::{
-    ApplicationId, Command, CreateCommand, CreateInteractionResponse,
-    CreateInteractionResponseMessage, GatewayIntents, Interaction, GuildId,
+    ApplicationId, Command, CreateAttachment, CreateCommand, CreateInteractionResponse,
+    CreateInteractionResponseMessage, EditAttachments, GatewayIntents, GuildId, Interaction,
 };
 use serenity::{async_trait, model::gateway::Ready, prelude::*, Client};
-use tracing::{info, error};
+use tracing::{error, info};
 
+use tokio::time::{timeout, Duration};
+use Discord_bot::models::StatementType;
 use Discord_bot::service::automation::{earnings_calendar, options_data};
 use Discord_bot::service::command::earnings as earnings_cmd;
 use Discord_bot::service::command::fundamentals as fundamentals_cmd;
@@ -16,8 +18,6 @@ use Discord_bot::service::command::holders as holders_cmd;
 use Discord_bot::service::command::news as news_cmd;
 use Discord_bot::service::command::quotes as quotes_cmd;
 use Discord_bot::service::finance::FinanceService;
-use Discord_bot::models::StatementType;
-use tokio::time::{timeout, Duration};
 
 struct Handler {
     finance: Arc<FinanceService>,
@@ -34,34 +34,74 @@ impl EventHandler for Handler {
         if let Some(guild_id) = guild_id {
             // Register guild commands (instant!)
             let _ = guild_id.create_command(&ctx.http, ping_command()).await;
-            let _ = guild_id.create_command(&ctx.http, fundamentals_cmd::register_command(StatementType::IncomeStatement)).await;
-            let _ = guild_id.create_command(&ctx.http, fundamentals_cmd::register_command(StatementType::BalanceSheet)).await;
-            let _ = guild_id.create_command(&ctx.http, fundamentals_cmd::register_command(StatementType::CashFlow)).await;
-            let _ = guild_id.create_command(&ctx.http, quotes_cmd::register_command()).await;
-            let _ = guild_id.create_command(&ctx.http, holders_cmd::register_command()).await;
-            let _ = guild_id.create_command(&ctx.http, news_cmd::register_command()).await;
-            let _ = guild_id.create_command(&ctx.http, earnings_cmd::register_command()).await;
-            info!("{} is connected. Guild commands registered instantly for testing.", ready.user.name);
+            let _ = guild_id
+                .create_command(
+                    &ctx.http,
+                    fundamentals_cmd::register_command(StatementType::IncomeStatement),
+                )
+                .await;
+            let _ = guild_id
+                .create_command(
+                    &ctx.http,
+                    fundamentals_cmd::register_command(StatementType::BalanceSheet),
+                )
+                .await;
+            let _ = guild_id
+                .create_command(
+                    &ctx.http,
+                    fundamentals_cmd::register_command(StatementType::CashFlow),
+                )
+                .await;
+            let _ = guild_id
+                .create_command(&ctx.http, quotes_cmd::register_command())
+                .await;
+            let _ = guild_id
+                .create_command(&ctx.http, holders_cmd::register_command())
+                .await;
+            let _ = guild_id
+                .create_command(&ctx.http, news_cmd::register_command())
+                .await;
+            let _ = guild_id
+                .create_command(&ctx.http, earnings_cmd::register_command())
+                .await;
+            info!(
+                "{} is connected. Guild commands registered instantly for testing.",
+                ready.user.name
+            );
         } else {
             // Fallback to global commands (takes up to 1 hour)
             let _ = Command::create_global_command(&ctx.http, ping_command()).await;
-            let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::IncomeStatement)).await;
-            let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::BalanceSheet)).await;
-            let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::CashFlow)).await;
+            let _ = Command::create_global_command(
+                &ctx.http,
+                fundamentals_cmd::register_command(StatementType::IncomeStatement),
+            )
+            .await;
+            let _ = Command::create_global_command(
+                &ctx.http,
+                fundamentals_cmd::register_command(StatementType::BalanceSheet),
+            )
+            .await;
+            let _ = Command::create_global_command(
+                &ctx.http,
+                fundamentals_cmd::register_command(StatementType::CashFlow),
+            )
+            .await;
             let _ = Command::create_global_command(&ctx.http, quotes_cmd::register_command()).await;
-            let _ = Command::create_global_command(&ctx.http, holders_cmd::register_command()).await;
+            let _ =
+                Command::create_global_command(&ctx.http, holders_cmd::register_command()).await;
             let _ = Command::create_global_command(&ctx.http, news_cmd::register_command()).await;
-            let _ = Command::create_global_command(&ctx.http, earnings_cmd::register_command()).await;
-            info!("{} is connected. Global commands registered (may take up to 1 hour).", ready.user.name);
+            let _ =
+                Command::create_global_command(&ctx.http, earnings_cmd::register_command()).await;
+            info!(
+                "{} is connected. Global commands registered (may take up to 1 hour).",
+                ready.user.name
+            );
         }
 
         // Start SPY options pinger (every 15 minutes) if configured
         options_data::spawn_options_pinger(ctx.http.clone(), self.finance.clone());
         // Start daily earnings poster
-        earnings_calendar::spawn_earnings_poster(
-            ctx.http.clone(),
-            self.finance.clone(),
-        );
+        earnings_calendar::spawn_earnings_poster(ctx.http.clone(), self.finance.clone());
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -94,7 +134,10 @@ impl EventHandler for Handler {
 
                     // Send the follow-up message
                     let _ = command
-                        .edit_response(&ctx.http, serenity::all::EditInteractionResponse::new().content(content))
+                        .edit_response(
+                            &ctx.http,
+                            serenity::all::EditInteractionResponse::new().content(content),
+                        )
                         .await;
                 }
                 "quote" => {
@@ -165,17 +208,31 @@ impl EventHandler for Handler {
                         )
                         .await;
 
-                    let content = match earnings_cmd::handle(&command, &self.finance).await {
-                        Ok(msg) => msg,
-                        Err(err) => format!("❌ {}", err),
+                    let response = match earnings_cmd::handle(&command, &self.finance).await {
+                        Ok(resp) => resp,
+                        Err(err) => {
+                            let _ = command
+                                .edit_response(
+                                    &ctx.http,
+                                    serenity::all::EditInteractionResponse::new()
+                                        .content(format!("❌ {}", err)),
+                                )
+                                .await;
+                            return;
+                        }
                     };
 
-                    let _ = command
-                        .edit_response(
-                            &ctx.http,
-                            serenity::all::EditInteractionResponse::new().content(content),
-                        )
-                        .await;
+                    let mut edit =
+                        serenity::all::EditInteractionResponse::new().content(response.content);
+
+                    if let Some(bytes) = response.image {
+                        let attachment =
+                            CreateAttachment::bytes(bytes, "earnings-calendar.png");
+                        let attachments = EditAttachments::new().add(attachment);
+                        edit = edit.attachments(attachments);
+                    }
+
+                    let _ = command.edit_response(&ctx.http, edit).await;
                 }
                 _ => {
                     let _ = command
@@ -206,13 +263,11 @@ async fn main() -> Result<()> {
 
     info!("Initializing FinanceService...");
     let finance = Arc::new(FinanceService::new(None)?);
-    
+
     info!("Starting Discord client...");
     let mut client = Client::builder(token, intents)
         .application_id(app_id)
-        .event_handler(Handler { 
-            finance, 
-        })
+        .event_handler(Handler { finance })
         .await?;
 
     if let Err(why) = client.start().await {

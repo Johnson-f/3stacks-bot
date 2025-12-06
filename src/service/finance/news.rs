@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use finance_query_core::{YahooFinanceClient, YahooError};
+use finance_query_core::{YahooError, YahooFinanceClient};
 use serde_json::Value;
 
 use std::cmp::Ordering;
@@ -19,7 +19,10 @@ pub async fn fetch_news(
 fn parse_news(data: &Value, limit: usize) -> Vec<NewsItem> {
     let mut items = Vec::new();
     let empty = Vec::new();
-    let news = data.get("news").and_then(|n| n.as_array()).unwrap_or(&empty);
+    let news = data
+        .get("news")
+        .and_then(|n| n.as_array())
+        .unwrap_or(&empty);
 
     for item in news {
         let title = item

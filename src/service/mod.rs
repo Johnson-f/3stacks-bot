@@ -1,3 +1,3 @@
-pub mod finance;
-pub mod command;
 pub mod automation;
+pub mod command;
+pub mod finance;

@@ -63,4 +63,9 @@ futures-util = "0.3"
 # For fetching stock market related data 
 finance-query-core = "0.2.1"
 
+# Image rendering for earnings calendar
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+imageproc = "0.25"
+ab_glyph = "0.2"
+
 # Database/Cache no longer used

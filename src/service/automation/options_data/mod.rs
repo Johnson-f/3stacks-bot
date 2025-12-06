@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    env,
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashMap, env, sync::Arc, time::Duration};
 
 use chrono::{Timelike, Utc};
 use chrono_tz::America::New_York;
@@ -17,8 +12,9 @@ use tracing::{error, info};
 use crate::service::finance::options::OptionSlice;
 use crate::service::finance::FinanceService;
 
-static STRIKE_HISTORY: once_cell::sync::Lazy<Mutex<HashMap<String, Vec<(chrono::DateTime<Utc>, f64)>>>> =
-    once_cell::sync::Lazy::new(|| Mutex::new(HashMap::new()));
+static STRIKE_HISTORY: once_cell::sync::Lazy<
+    Mutex<HashMap<String, Vec<(chrono::DateTime<Utc>, f64)>>>,
+> = once_cell::sync::Lazy::new(|| Mutex::new(HashMap::new()));
 static LAST_RUN: once_cell::sync::Lazy<Mutex<Option<chrono::DateTime<Utc>>>> =
     once_cell::sync::Lazy::new(|| Mutex::new(None));
 
@@ -61,7 +57,11 @@ pub fn spawn_options_pinger(
     }))
 }
 
-async fn post_once(http: &Http, finance: &FinanceService, channel_id: ChannelId) -> Result<(), String> {
+async fn post_once(
+    http: &Http,
+    finance: &FinanceService,
+    channel_id: ChannelId,
+) -> Result<(), String> {
     let slice = finance
         .get_option_slice_today("SPY", 5)
         .await
@@ -99,8 +99,14 @@ fn format_slice(slice: &OptionSlice) -> String {
         slice.spot,
         Utc::now().format("%H:%M UTC")
     ));
-    out.push(format!("Calls (top 5 above spot):\n{}", fmt_side(&slice.calls)));
-    out.push(format!("Puts (top 5 below spot):\n{}", fmt_side(&slice.puts)));
+    out.push(format!(
+        "Calls (top 5 above spot):\n{}",
+        fmt_side(&slice.calls)
+    ));
+    out.push(format!(
+        "Puts (top 5 below spot):\n{}",
+        fmt_side(&slice.puts)
+    ));
     out.join("\n\n")
 }
 
@@ -149,8 +155,8 @@ async fn build_chart_bytes(slice: &OptionSlice) -> Result<Vec<u8>, String> {
     let mut datasets = Vec::new();
     // assign distinct colors per strike
     let palette = [
-        "#4caf50", "#f44336", "#2196f3", "#ff9800", "#9c27b0",
-        "#00bcd4", "#8bc34a", "#ff5722", "#3f51b5", "#cddc39",
+        "#4caf50", "#f44336", "#2196f3", "#ff9800", "#9c27b0", "#00bcd4", "#8bc34a", "#ff5722",
+        "#3f51b5", "#cddc39",
     ];
     let mut idx = 0usize;
 

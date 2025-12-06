@@ -46,9 +46,16 @@ pub async fn handle(
         let source = item.source.clone().unwrap_or_else(|| "Unknown".to_string());
         let time_str = item
             .published_at
-            .map(|t| t.with_timezone(&Utc).format("%Y-%m-%d %H:%M UTC").to_string())
+            .map(|t| {
+                t.with_timezone(&Utc)
+                    .format("%Y-%m-%d %H:%M UTC")
+                    .to_string()
+            })
             .unwrap_or_else(|| "time n/a".to_string());
-        lines.push(format!("• [{}]({}) — {} ({})", item.title, item.link, source, time_str));
+        lines.push(format!(
+            "• [{}]({}) — {} ({})",
+            item.title, item.link, source, time_str
+        ));
     }
 
     Ok(lines.join("\n"))

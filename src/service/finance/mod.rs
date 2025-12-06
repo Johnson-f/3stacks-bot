@@ -8,11 +8,11 @@ use crate::models::{
     StatementType,
 };
 
+pub mod earnings;
 pub mod fundamentals;
 pub mod holders;
-pub mod options;
 pub mod news;
-pub mod earnings;
+pub mod options;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FinanceServiceError {
@@ -39,7 +39,11 @@ impl FinanceService {
         let auth = Arc::new(YahooAuthManager::new(proxy, fetch.cookie_jar().clone()));
         let client = Arc::new(YahooFinanceClient::new(auth.clone(), fetch.clone()));
 
-        Ok(Self { client, auth, fetch })
+        Ok(Self {
+            client,
+            auth,
+            fetch,
+        })
     }
 
     /// Access the underlying YahooFinanceClient.
@@ -156,8 +160,7 @@ impl FinanceService {
         symbol: &str,
         holder_type: HolderType,
     ) -> Result<HoldersOverview, FinanceServiceError> {
-        let data =
-            holders::fetch_holders(self.client.as_ref(), symbol, holder_type).await?;
+        let data = holders::fetch_holders(self.client.as_ref(), symbol, holder_type).await?;
         Ok(data)
     }
 
@@ -185,7 +188,6 @@ impl FinanceService {
     ) -> Result<Vec<EarningsEvent>, FinanceServiceError> {
         earnings::fetch_earnings_range(from, to).await
     }
-
 }
 
 /// Extract the first simple quote from the Yahoo response into our bot-facing struct.
@@ -210,9 +212,7 @@ fn extract_simple_quote(data: &Value) -> Option<PriceQuote> {
             .or_else(|| result.get("financialCurrency"))
             .and_then(|c| c.as_str())
             .map(|s| s.to_string()),
-        change: result
-            .get("regularMarketChange")
-            .and_then(|v| v.as_f64()),
+        change: result.get("regularMarketChange").and_then(|v| v.as_f64()),
         percent_change: result
             .get("regularMarketChangePercent")
             .and_then(|v| v.as_f64()),

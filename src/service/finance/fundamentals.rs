@@ -1,18 +1,16 @@
 use chrono::{DateTime, Duration, Utc};
 use finance_query_core::{
     utils::{
-        financials_constants::{
-            BALANCE_SHEET_FIELDS, CASH_FLOW_FIELDS, INCOME_STATEMENT_FIELDS,
-        },
+        financials_constants::{BALANCE_SHEET_FIELDS, CASH_FLOW_FIELDS, INCOME_STATEMENT_FIELDS},
         get_statement_fields,
     },
-    YahooFinanceClient, YahooError,
+    YahooError, YahooFinanceClient,
 };
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
-use crate::models::{Frequency, StatementType};
 use crate::models::FinancialStatement;
+use crate::models::{Frequency, StatementType};
 
 /// Default lookback for fundamentals queries (in years).
 pub const FETCH_YEARS_DEFAULT: i64 = 5;
@@ -106,12 +104,14 @@ pub fn reshape_timeseries_to_financial_statements(data: &Value) -> Vec<Financial
                 frequency.to_string(),
             );
 
-            let fs = grouped.entry(key.clone()).or_insert_with(|| FinancialStatement {
-                symbol: symbol.clone(),
-                statement_type: statement_type.to_string(),
-                frequency: frequency.to_string(),
-                statement: HashMap::new(),
-            });
+            let fs = grouped
+                .entry(key.clone())
+                .or_insert_with(|| FinancialStatement {
+                    symbol: symbol.clone(),
+                    statement_type: statement_type.to_string(),
+                    frequency: frequency.to_string(),
+                    statement: HashMap::new(),
+                });
 
             let metric_map = fs
                 .statement

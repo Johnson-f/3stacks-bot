@@ -43,23 +43,20 @@ pub async fn fetch_earnings_range(
     to: NaiveDate,
 ) -> Result<Vec<EarningsEvent>, FinanceServiceError> {
     info!("Fetching earnings from {} to {}", from, to);
-    
+
     let client = reqwest::Client::builder()
         .timeout(StdDuration::from_secs(15)) // 15 second timeout
         .build()
         .map_err(|e| FinanceServiceError::Http(format!("failed to build client: {e}")))?;
-    
+
     let from_str = from.format("%Y-%m-%d").to_string();
     let to_str = to.format("%Y-%m-%d").to_string();
-    
+
     info!("Making request to earnings API...");
-    
+
     let resp = client
         .get(EARNINGS_API_URL) // Changed to GET
-        .query(&[
-            ("fromDate", &from_str),
-            ("toDate", &to_str),
-        ])
+        .query(&[("fromDate", &from_str), ("toDate", &to_str)])
         .header("Authorization", format!("Bearer {}", EARNINGS_API_BEARER))
         .send()
         .await
@@ -72,7 +69,10 @@ pub async fn fetch_earnings_range(
 
     if !resp.status().is_success() {
         let status = resp.status();
-        let body = resp.text().await.unwrap_or_else(|_| "unable to read body".to_string());
+        let body = resp
+            .text()
+            .await
+            .unwrap_or_else(|_| "unable to read body".to_string());
         warn!("Earnings API returned error status {}: {}", status, body);
         return Err(FinanceServiceError::Http(format!(
             "earnings api status {}: {}",
@@ -80,13 +80,10 @@ pub async fn fetch_earnings_range(
         )));
     }
 
-    let body: ApiResponse = resp
-        .json()
-        .await
-        .map_err(|e| {
-            warn!("Failed to parse earnings API response: {}", e);
-            FinanceServiceError::Http(format!("earnings parse failed: {e}"))
-        })?;
+    let body: ApiResponse = resp.json().await.map_err(|e| {
+        warn!("Failed to parse earnings API response: {}", e);
+        FinanceServiceError::Http(format!("earnings parse failed: {e}"))
+    })?;
 
     if !body.success {
         warn!("Earnings API returned success=false");
@@ -103,21 +100,21 @@ pub async fn fetch_earnings_range(
 
     let mut events = Vec::new();
     for (date_str, group) in body.earnings {
-        let parsed_date = NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
-            .unwrap_or_else(|_| {
-                warn!("Failed to parse date: {}, using fallback", date_str);
-                from
-            });
-        
+        let parsed_date = NaiveDate::parse_from_str(&date_str, "%Y-%m-%d").unwrap_or_else(|_| {
+            warn!("Failed to parse date: {}, using fallback", date_str);
+            from
+        });
+
         for s in group.stocks {
             events.push(EarningsEvent {
                 symbol: s.symbol,
-                date: Utc
-                    .from_utc_datetime(&parsed_date.and_hms_opt(0, 0, 0).unwrap_or_else(|| {
+                date: Utc.from_utc_datetime(&parsed_date.and_hms_opt(0, 0, 0).unwrap_or_else(
+                    || {
                         parsed_date
                             .and_hms_opt(0, 0, 0)
                             .expect("failed to build datetime")
-                    })),
+                    },
+                )),
                 date_end: None,
                 time_of_day: s.time,
                 eps_estimate: None,
@@ -132,7 +129,7 @@ pub async fn fetch_earnings_range(
     }
 
     events.sort_by(|a, b| a.date.cmp(&b.date).then_with(|| a.symbol.cmp(&b.symbol)));
-    
+
     info!("Returning {} earnings events", events.len());
     Ok(events)
 }

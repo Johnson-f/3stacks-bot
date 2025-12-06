@@ -276,7 +276,11 @@ fn parse_insider_roster(result: &Value) -> Option<Vec<InsiderRosterMember>> {
 
     let mut out = Vec::new();
     for item in list {
-        let name = item.get("name").and_then(|s| s.as_str()).unwrap_or("").to_string();
+        let name = item
+            .get("name")
+            .and_then(|s| s.as_str())
+            .unwrap_or("")
+            .to_string();
         if name.is_empty() {
             continue;
         }
@@ -303,9 +307,7 @@ fn parse_insider_roster(result: &Value) -> Option<Vec<InsiderRosterMember>> {
             .get("positionIndirect")
             .or_else(|| item.get("sharesOwnedIndirectly"))
             .and_then(value_to_i64);
-        let position_direct_date = item
-            .get("positionDirectDate")
-            .and_then(parse_timestamp);
+        let position_direct_date = item.get("positionDirectDate").and_then(parse_timestamp);
 
         out.push(InsiderRosterMember {
             name,
@@ -324,4 +326,3 @@ fn parse_insider_roster(result: &Value) -> Option<Vec<InsiderRosterMember>> {
         Some(out)
     }
 }
-

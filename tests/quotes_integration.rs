@@ -1,6 +1,6 @@
 use finance_query_core::{FetchClient, YahooAuthManager, YahooFinanceClient};
-use std::sync::Arc;
 use serde_json::to_string_pretty;
+use std::sync::Arc;
 
 /// Integration test that hits the live Yahoo Finance API via finance-query-core.
 ///
@@ -23,7 +23,11 @@ async fn fetches_live_quote() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(out_path, &pretty)?;
-    println!("full quote response saved to {}:\n{}", out_path.display(), pretty);
+    println!(
+        "full quote response saved to {}:\n{}",
+        out_path.display(),
+        pretty
+    );
 
     let result = data
         .get("quoteResponse")
@@ -33,8 +37,10 @@ async fn fetches_live_quote() -> Result<(), Box<dyn std::error::Error>> {
         .ok_or("no quote data returned")?;
 
     assert_eq!(result.get("symbol").and_then(|s| s.as_str()), Some("AAPL"));
-    assert!(result.get("regularMarketPrice").is_some(), "regularMarketPrice missing");
+    assert!(
+        result.get("regularMarketPrice").is_some(),
+        "regularMarketPrice missing"
+    );
 
     Ok(())
 }
-

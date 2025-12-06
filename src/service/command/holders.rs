@@ -21,18 +21,14 @@ pub fn register_command() -> CreateCommand {
             .required(true),
         )
         .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::String,
-                "type",
-                "Holder category",
-            )
-            .add_string_choice("Major", "major")
-            .add_string_choice("Institutional", "institutional")
-            .add_string_choice("Mutual Fund", "mutualfund")
-            .add_string_choice("Insider Transactions", "insider_transactions")
-            .add_string_choice("Insider Purchases (summary)", "insider_purchases")
-            .add_string_choice("Insider Roster", "insider_roster")
-            .required(true),
+            CreateCommandOption::new(CommandOptionType::String, "type", "Holder category")
+                .add_string_choice("Major", "major")
+                .add_string_choice("Institutional", "institutional")
+                .add_string_choice("Mutual Fund", "mutualfund")
+                .add_string_choice("Insider Transactions", "insider_transactions")
+                .add_string_choice("Insider Purchases (summary)", "insider_purchases")
+                .add_string_choice("Insider Roster", "insider_roster")
+                .required(true),
         )
         .add_option(
             CreateCommandOption::new(
@@ -90,10 +86,9 @@ pub async fn handle(
             limit,
             &data.symbol,
         ),
-        HolderType::InsiderPurchases => format_purchases(
-            data.insider_purchases.as_ref(),
-            &data.symbol,
-        ),
+        HolderType::InsiderPurchases => {
+            format_purchases(data.insider_purchases.as_ref(), &data.symbol)
+        }
         HolderType::InsiderRoster => format_roster(
             &data.insider_roster.unwrap_or_default(),
             limit,
@@ -123,16 +118,15 @@ fn format_major(data: &crate::models::HoldersOverview) -> Option<String> {
     if parts.is_empty() {
         None
     } else {
-        Some(format!("Major holders for {} | {}", data.symbol, parts.join(" | ")))
+        Some(format!(
+            "Major holders for {} | {}",
+            data.symbol,
+            parts.join(" | ")
+        ))
     }
 }
 
-fn format_table<T>(
-    rows: &[T],
-    limit: usize,
-    heading: &str,
-    symbol: &str,
-) -> Result<String, String>
+fn format_table<T>(rows: &[T], limit: usize, heading: &str, symbol: &str) -> Result<String, String>
 where
     T: HolderRow,
 {
@@ -245,7 +239,9 @@ fn format_transactions(
             tx.insider,
             tx.position,
             tx.transaction,
-            tx.shares.map(format_shares_m).unwrap_or_else(|| "n/a".into()),
+            tx.shares
+                .map(format_shares_m)
+                .unwrap_or_else(|| "n/a".into()),
             tx.value
                 .map(|v| format!("${:.2}M", v as f64 / 1_000_000.0))
                 .unwrap_or_else(|| "n/a".into()),

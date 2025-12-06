@@ -1,14 +1,14 @@
-pub mod quotes;
+pub mod earnings;
 pub mod fundamentals;
 pub mod holders;
 pub mod news;
-pub mod earnings;
+pub mod quotes;
 
-pub use fundamentals::{FinancialSummary, StatementType, Frequency, FinancialStatement};
-pub use quotes::PriceQuote;
+pub use earnings::EarningsEvent;
+pub use fundamentals::{FinancialStatement, FinancialSummary, Frequency, StatementType};
 pub use holders::{
-    HolderType, MajorHoldersBreakdown, InstitutionalHolder, MutualFundHolder, InsiderTransaction,
-    InsiderPurchase, InsiderRosterMember, HoldersOverview,
+    HolderType, HoldersOverview, InsiderPurchase, InsiderRosterMember, InsiderTransaction,
+    InstitutionalHolder, MajorHoldersBreakdown, MutualFundHolder,
 };
 pub use news::NewsItem;
-pub use earnings::EarningsEvent;
+pub use quotes::PriceQuote;
