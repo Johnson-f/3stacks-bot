@@ -7,18 +7,19 @@ use serenity::all::{
     CreateInteractionResponseMessage, GatewayIntents, Interaction, GuildId,
 };
 use serenity::{async_trait, model::gateway::Ready, prelude::*, Client};
-use tracing::info;
+use tracing::{info, error};
 
-use Discord_bot::service::automation::options_data;
+use Discord_bot::service::automation::{earnings_calendar, options_data};
+use Discord_bot::service::command::earnings as earnings_cmd;
 use Discord_bot::service::command::fundamentals as fundamentals_cmd;
 use Discord_bot::service::command::holders as holders_cmd;
-use Discord_bot::service::command::quotes as quotes_cmd;
 use Discord_bot::service::command::news as news_cmd;
+use Discord_bot::service::command::quotes as quotes_cmd;
 use Discord_bot::service::finance::FinanceService;
 use Discord_bot::models::StatementType;
+use tokio::time::{timeout, Duration};
 
 struct Handler {
-    app_id: ApplicationId,
     finance: Arc<FinanceService>,
 }
 
@@ -39,21 +40,28 @@ impl EventHandler for Handler {
             let _ = guild_id.create_command(&ctx.http, quotes_cmd::register_command()).await;
             let _ = guild_id.create_command(&ctx.http, holders_cmd::register_command()).await;
             let _ = guild_id.create_command(&ctx.http, news_cmd::register_command()).await;
+            let _ = guild_id.create_command(&ctx.http, earnings_cmd::register_command()).await;
             info!("{} is connected. Guild commands registered instantly for testing.", ready.user.name);
         } else {
             // Fallback to global commands (takes up to 1 hour)
-        let _ = Command::create_global_command(&ctx.http, ping_command()).await;
+            let _ = Command::create_global_command(&ctx.http, ping_command()).await;
             let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::IncomeStatement)).await;
             let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::BalanceSheet)).await;
             let _ = Command::create_global_command(&ctx.http, fundamentals_cmd::register_command(StatementType::CashFlow)).await;
             let _ = Command::create_global_command(&ctx.http, quotes_cmd::register_command()).await;
             let _ = Command::create_global_command(&ctx.http, holders_cmd::register_command()).await;
             let _ = Command::create_global_command(&ctx.http, news_cmd::register_command()).await;
+            let _ = Command::create_global_command(&ctx.http, earnings_cmd::register_command()).await;
             info!("{} is connected. Global commands registered (may take up to 1 hour).", ready.user.name);
         }
 
         // Start SPY options pinger (every 15 minutes) if configured
         options_data::spawn_options_pinger(ctx.http.clone(), self.finance.clone());
+        // Start daily earnings poster
+        earnings_calendar::spawn_earnings_poster(
+            ctx.http.clone(),
+            self.finance.clone(),
+        );
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -120,9 +128,9 @@ impl EventHandler for Handler {
                     let content = match holders_cmd::handle(&command, &self.finance).await {
                         Ok(msg) => msg,
                         Err(err) => format!("❌ {}", err),
-            };
+                    };
 
-            let _ = command
+                    let _ = command
                         .edit_response(
                             &ctx.http,
                             serenity::all::EditInteractionResponse::new().content(content),
@@ -149,6 +157,26 @@ impl EventHandler for Handler {
                         )
                         .await;
                 }
+                "earnings" => {
+                    let _ = command
+                        .create_response(
+                            &ctx.http,
+                            CreateInteractionResponse::Defer(Default::default()),
+                        )
+                        .await;
+
+                    let content = match earnings_cmd::handle(&command, &self.finance).await {
+                        Ok(msg) => msg,
+                        Err(err) => format!("❌ {}", err),
+                    };
+
+                    let _ = command
+                        .edit_response(
+                            &ctx.http,
+                            serenity::all::EditInteractionResponse::new().content(content),
+                        )
+                        .await;
+                }
                 _ => {
                     let _ = command
                         .create_response(
@@ -158,7 +186,7 @@ impl EventHandler for Handler {
                                     .content("Command not implemented."),
                             ),
                         )
-                .await;
+                        .await;
                 }
             }
         }
@@ -176,11 +204,15 @@ async fn main() -> Result<()> {
 
     let intents = GatewayIntents::empty();
 
+    info!("Initializing FinanceService...");
     let finance = Arc::new(FinanceService::new(None)?);
-
+    
+    info!("Starting Discord client...");
     let mut client = Client::builder(token, intents)
         .application_id(app_id)
-        .event_handler(Handler { app_id, finance })
+        .event_handler(Handler { 
+            finance, 
+        })
         .await?;
 
     if let Err(why) = client.start().await {

@@ -4,13 +4,15 @@ use finance_query_core::{FetchClient, YahooAuthManager, YahooError, YahooFinance
 use serde_json::Value;
 
 use crate::models::{
-    FinancialSummary, Frequency, HolderType, HoldersOverview, NewsItem, PriceQuote, StatementType,
+    EarningsEvent, FinancialSummary, Frequency, HolderType, HoldersOverview, NewsItem, PriceQuote,
+    StatementType,
 };
 
 pub mod fundamentals;
 pub mod holders;
 pub mod options;
 pub mod news;
+pub mod earnings;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FinanceServiceError {
@@ -18,6 +20,8 @@ pub enum FinanceServiceError {
     Yahoo(#[from] YahooError),
     #[error("No quote data for symbol {0}")]
     NotFound(String),
+    #[error("Earnings API error: {0}")]
+    Http(String),
 }
 
 pub struct FinanceService {
@@ -36,6 +40,11 @@ impl FinanceService {
         let client = Arc::new(YahooFinanceClient::new(auth.clone(), fetch.clone()));
 
         Ok(Self { client, auth, fetch })
+    }
+
+    /// Access the underlying YahooFinanceClient.
+    pub fn client(&self) -> &YahooFinanceClient {
+        self.client.as_ref()
     }
 
     /// Fetch a simple price quote for a single symbol.
@@ -166,6 +175,15 @@ impl FinanceService {
             )));
         }
         Ok(items)
+    }
+
+    /// Fetch earnings events for a date range (external API).
+    pub async fn get_earnings_range(
+        &self,
+        from: chrono::NaiveDate,
+        to: chrono::NaiveDate,
+    ) -> Result<Vec<EarningsEvent>, FinanceServiceError> {
+        earnings::fetch_earnings_range(from, to).await
     }
 
 }

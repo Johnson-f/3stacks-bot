@@ -2,6 +2,7 @@ pub mod quotes;
 pub mod fundamentals;
 pub mod holders;
 pub mod news;
+pub mod earnings;
 
 pub use fundamentals::{FinancialSummary, StatementType, Frequency, FinancialStatement};
 pub use quotes::PriceQuote;
@@ -10,3 +11,4 @@ pub use holders::{
     InsiderPurchase, InsiderRosterMember, HoldersOverview,
 };
 pub use news::NewsItem;
+pub use earnings::EarningsEvent;

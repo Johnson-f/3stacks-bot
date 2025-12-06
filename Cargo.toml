@@ -6,17 +6,17 @@ edition = "2021"
 [dependencies]
 # Discord library with all necessary features
 serenity = { version = "0.12.4", default-features = false, features = [
-    "builder",           # Core client functionality
-    "cache",          # Gateway connection
-    "collector",   # TLS backend for secure connections
-    "client",            # Discord data models
-    "framework",            # Caching for better performance
-    "gateway",        # Command framework
-    "http", # Standard command parsing
+    "builder",           
+    "cache",         
+    "collector",  
+    "client",            
+    "framework",            
+    "gateway",      
+    "http", 
     "model",           
-    "standard_framework",        # Event collectors
-    "utils",            # Utility functions
-    "voice",             # Voice support (if needed later)
+    "standard_framework",        
+    "utils",            
+    "voice",            
     "rustls_backend",
     "chrono",
     "interactions_endpoint",
@@ -63,8 +63,4 @@ futures-util = "0.3"
 # For fetching stock market related data 
 finance-query-core = "0.2.1"
 
-# Optional: Database support
-# sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
-
-# Optional: Rate limiting
-# governor = "0.6"
+# Database/Cache no longer used
