@@ -22,6 +22,13 @@ jobs:
           override: true
           components: clippy
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libfontconfig1-dev \
+            pkg-config
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -53,4 +60,3 @@ jobs:
           tags: |
             johnsonf/discord-bot:${{ github.ref_name }}
             johnsonf/discord-bot:latest
-
