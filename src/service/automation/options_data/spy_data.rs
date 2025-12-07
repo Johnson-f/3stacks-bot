@@ -251,7 +251,7 @@ async fn should_run_now() -> bool {
     }
 
     // Only on 15-minute marks
-    if minute % 15 != 0 {
+    if !minute.is_multiple_of(15) {
         return false;
     }
 
