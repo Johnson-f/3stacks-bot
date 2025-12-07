@@ -1,11 +1,25 @@
-use chrono::Utc;
-use serenity::all::{CommandInteraction, CreateCommand};
-use tokio::time::{timeout, Duration};
+use chrono::{Datelike, Duration, Utc, Weekday};
+use chrono_tz::America::New_York;
+use std::time::Duration as StdDuration;
+use serenity::all::{CommandInteraction, CreateCommand, Http};
+use tokio::time::timeout;
 use tracing::{error, info, warn};
 
 use crate::models::EarningsEvent;
-use crate::service::automation::earnings_calendar;
+use crate::service::automation::earnings;
 use crate::service::finance::FinanceService;
+
+fn week_range_mon_fri(weekday: Weekday, today: chrono::NaiveDate) -> (chrono::NaiveDate, chrono::NaiveDate) {
+    // Monday is 0, Sunday is 6
+    let days_from_mon = weekday.num_days_from_monday() as i64;
+    let monday = if weekday == Weekday::Sun {
+        today + Duration::days(1)
+    } else {
+        today - Duration::days(days_from_mon)
+    };
+    let friday = monday + Duration::days(4);
+    (monday, friday)
+}
 
 /// Response payload for the /earnings command.
 pub struct EarningsResponse {
@@ -13,24 +27,32 @@ pub struct EarningsResponse {
     pub image: Option<Vec<u8>>,
 }
 
-pub fn register_command() -> CreateCommand {
-    CreateCommand::new("earnings").description("Next 7 days of earnings for watchlist symbols")
+pub fn register_weekly_command() -> CreateCommand {
+    CreateCommand::new("weekly-earnings").description("Next 7 days of earnings for watchlist symbols")
 }
 
-pub async fn handle(
+pub fn register_daily_command() -> CreateCommand {
+    CreateCommand::new("daily-earnings").description("Today's earnings with implied move snapshot")
+}
+
+pub async fn handle_weekly(
     _command: &CommandInteraction,
     finance: &FinanceService,
 ) -> Result<EarningsResponse, String> {
     info!("Starting earnings command handler");
 
-    let start = Utc::now().date_naive();
-    let end = start + chrono::Duration::days(7);
+    // Compute the Monday–Friday range for the relevant week:
+    // - Mon–Fri: current week (Mon..Fri)
+    // - Sat: still the current week's Mon..Fri
+    // - Sun: next week's Mon..Fri
+    let now_et = Utc::now().with_timezone(&New_York);
+    let (start, end) = week_range_mon_fri(now_et.weekday(), now_et.date_naive());
 
     info!("Fetching earnings from {} to {}", start, end);
 
     // Wrap the entire fetch in a timeout
     let events = match timeout(
-        Duration::from_secs(20), // 20 second total timeout
+        StdDuration::from_secs(200), // 20 second total timeout
         finance.get_earnings_range(start, end),
     )
     .await
@@ -60,11 +82,13 @@ pub async fn handle(
     info!("Formatting output for {} events", events.len());
     let output = format_output(&events);
     let summary = format!(
-        "📊 Earnings Calendar (next 7 days) — {} events",
+        "📊 Earnings Calendar ({} to {}) — {} events",
+        start.format("%Y-%m-%d"),
+        end.format("%Y-%m-%d"),
         events.len()
     );
 
-    match earnings_calendar::render_calendar_image(&events).await {
+    match earnings::render_calendar_image(&events).await {
         Ok(bytes) => Ok(EarningsResponse {
             content: summary,
             image: Some(bytes),
@@ -99,6 +123,16 @@ pub async fn handle(
             })
         }
     }
+}
+
+/// Post today's earnings summary to the current channel using the daily automation helper.
+pub async fn handle_daily(
+    command: &CommandInteraction,
+    finance: &FinanceService,
+    http: &Http,
+) -> Result<String, String> {
+    earnings::send_daily_report(http, finance, command.channel_id).await?;
+    Ok("Posted today's earnings report to this channel.".to_string())
 }
 
 pub fn format_output(events: &[EarningsEvent]) -> String {

@@ -4,7 +4,8 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use ab_glyph::{FontArc, PxScale};
-use chrono::{Datelike, NaiveDate, Timelike, Utc};
+use chrono::{Datelike, NaiveDate, Timelike, Utc, Weekday};
+use chrono_tz::America::New_York;
 use font_kit::family_name::FamilyName;
 use font_kit::properties::{Properties, Weight};
 use font_kit::source::SystemSource;
@@ -27,7 +28,7 @@ use crate::service::finance::FinanceService;
 
 static LAST_POST_DATE: Lazy<Mutex<Option<chrono::NaiveDate>>> = Lazy::new(|| Mutex::new(None));
 
-/// Spawn a daily earnings poster (once per day).
+/// Spawn a weekly earnings poster (Sunday at 5pm ET).
 pub fn spawn_earnings_poster(
     http: Arc<Http>,
     finance: Arc<FinanceService>,
@@ -51,10 +52,10 @@ pub fn spawn_earnings_poster(
         }
     };
 
-    info!("Starting earnings poster to channel {}", channel_id);
+    info!("Starting weekly earnings poster to channel {}", channel_id);
 
     Some(tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1800));
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
         loop {
             interval.tick().await;
             if should_post_now().await {
@@ -71,8 +72,11 @@ async fn post_once(
     finance: &FinanceService,
     channel_id: ChannelId,
 ) -> Result<(), String> {
-    let start = chrono::Utc::now().date_naive();
-    let end = start + chrono::Duration::days(7);
+    let now_et = Utc::now().with_timezone(&New_York);
+    let start = now_et.date_naive();
+    let end = start + chrono::Duration::days(5); // Sunday through Friday
+    let week_monday = start + chrono::Duration::days(1);
+    let heading = format!("@everyone 📊 Earnings Calendar — Week of {}", week_monday);
 
     let events = finance
         .get_earnings_range(start, end)
@@ -91,14 +95,14 @@ async fn post_once(
                 .send_files(
                     http,
                     vec![attachment],
-                    CreateMessage::new().content("📊 Earnings Calendar (next 7 days)"),
+                    CreateMessage::new().content(heading.clone()),
                 )
                 .await
                 .map_err(|e| format!("failed to post earnings calendar image: {e}"))?;
         }
         Err(render_err) => {
             warn!("Falling back to text earnings calendar: {}", render_err);
-            let content = format_output(&events);
+            let content = format!("{}\n\n{}", heading, format_output(&events));
             channel_id
                 .say(http, content)
                 .await
@@ -110,13 +114,18 @@ async fn post_once(
 }
 
 async fn should_post_now() -> bool {
-    let now = Utc::now();
-    let in_window = now.hour() == 13;
-    if !in_window {
+    let now_utc = Utc::now();
+    let now_et = now_utc.with_timezone(&New_York);
+
+    // Only on Sundays at 5:00 PM ET (allow a small window to avoid missing the minute)
+    if now_et.weekday() != Weekday::Sun {
+        return false;
+    }
+    if !(now_et.hour() == 17 && now_et.minute() < 5) {
         return false;
     }
 
-    let today = now.date_naive();
+    let today = now_et.date_naive();
     let mut last = LAST_POST_DATE.lock().await;
     if let Some(prev) = *last {
         if prev == today {
