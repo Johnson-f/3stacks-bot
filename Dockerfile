@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/Discord-bot /usr/local/bin/discord-bot
+COPY --from=builder /app/target/release/discord-bot /usr/local/bin/discord-bot
 
 USER bot
 ENV RUST_LOG=info
