@@ -1,7 +1,7 @@
 ## Multi-stage build for the Discord bot
 # Uses a slim Debian base to satisfy font/rendering libs required by font-kit/image
 
-FROM rust:1.82-slim-bullseye AS builder
+FROM rust:1.85-slim-bullseye AS builder
 
 ENV CARGO_TERM_COLOR=always
 WORKDIR /app
