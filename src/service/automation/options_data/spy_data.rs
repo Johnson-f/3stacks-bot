@@ -251,7 +251,8 @@ async fn should_run_now() -> bool {
     }
 
     // Only on 15-minute marks
-    if !minute.is_multiple_of(15) {
+    #[allow(clippy::manual_is_multiple_of)]
+    if minute % 15 != 0 {
         return false;
     }
 
