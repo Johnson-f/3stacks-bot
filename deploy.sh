@@ -12,13 +12,20 @@ SSH_KEY="$HOME/.ssh/id_ed25519_vps"
 
 DOCKER_IMAGE="johnsonf/discord-bot:latest"
 COMPOSE_DIR="/opt/discord-bot"
-SERVICE_NAME="discord-bot"
+SERVICE_NAME="bot"
 LOCAL_ENV_FILE=".env.${ENV}"
 REMOTE_ENV_FILE="${COMPOSE_DIR}/.env.production"
+LOCAL_COMPOSE_FILE="docker-compose.yml"
+REMOTE_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
 
 if [[ ! -f "${LOCAL_ENV_FILE}" ]]; then
   echo "[local] missing env file: ${LOCAL_ENV_FILE}"
   echo "Create it from env.production.example"
+  exit 1
+fi
+
+if [[ ! -f "${LOCAL_COMPOSE_FILE}" ]]; then
+  echo "[local] missing compose file: ${LOCAL_COMPOSE_FILE}"
   exit 1
 fi
 
@@ -34,6 +41,13 @@ scp -i "$SSH_KEY" \
   -o StrictHostKeyChecking=accept-new \
   "${LOCAL_ENV_FILE}" \
   "${VPS_USER}@${VPS_IP}:${REMOTE_ENV_FILE}"
+
+echo "[local] uploading compose file to ${REMOTE_COMPOSE_FILE}"
+scp -i "$SSH_KEY" \
+  -o BatchMode=yes \
+  -o StrictHostKeyChecking=accept-new \
+  "${LOCAL_COMPOSE_FILE}" \
+  "${VPS_USER}@${VPS_IP}:${REMOTE_COMPOSE_FILE}"
 
 ssh -i "$SSH_KEY" \
   -o BatchMode=yes \

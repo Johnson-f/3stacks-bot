@@ -27,89 +27,81 @@ struct Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        let guild_id = env::var("GUILD_ID")
-            .ok()
-            .and_then(|id| id.parse::<u64>().ok())
-            .map(GuildId::new);
+        // Determine if we should use guild commands (dev) or global commands (prod)
+        #[cfg(debug_assertions)]
+        let use_guild_commands = true;
+        #[cfg(not(debug_assertions))]
+        let use_guild_commands = false;
 
-        if let Some(guild_id) = guild_id {
-            // Register guild commands (instant!)
-            let _ = guild_id.create_command(&ctx.http, ping_command()).await;
-            let _ = guild_id
-                .create_command(
-                    &ctx.http,
-                    fundamentals_cmd::register_command(StatementType::IncomeStatement),
-                )
-                .await;
-            let _ = guild_id
-                .create_command(
-                    &ctx.http,
-                    fundamentals_cmd::register_command(StatementType::BalanceSheet),
-                )
-                .await;
-            let _ = guild_id
-                .create_command(
-                    &ctx.http,
-                    fundamentals_cmd::register_command(StatementType::CashFlow),
-                )
-                .await;
-            let _ = guild_id
-                .create_command(&ctx.http, quotes_cmd::register_command())
-                .await;
-            let _ = guild_id
-                .create_command(&ctx.http, holders_cmd::register_command())
-                .await;
-            let _ = guild_id
-                .create_command(&ctx.http, news_cmd::register_command())
-                .await;
-            let _ = guild_id
-                .create_command(&ctx.http, earnings_cmd::register_weekly_command())
-                .await;
-            let _ = guild_id
-                .create_command(&ctx.http, earnings_cmd::register_daily_command())
-                .await;
-            let _ = guild_id
-                .create_command(&ctx.http, earnings_cmd::register_after_daily_command())
-                .await;
-            info!(
-                "{} is connected. Guild commands registered instantly for testing.",
-                ready.user.name
-            );
+        if use_guild_commands {
+            // Development: Register guild commands (instant!) to multiple servers
+            let guild_ids_str = env::var("GUILD_IDS")
+                .unwrap_or_else(|_| env::var("GUILD_ID").unwrap_or_default());
+            
+            let guild_ids: Vec<GuildId> = guild_ids_str
+                .split(',')
+                .filter_map(|id| id.trim().parse::<u64>().ok())
+                .map(GuildId::new)
+                .collect();
+
+            if !guild_ids.is_empty() {
+                for guild_id in guild_ids.iter() {
+                    let _ = guild_id.create_command(&ctx.http, ping_command()).await;
+                    let _ = guild_id
+                        .create_command(
+                            &ctx.http,
+                            fundamentals_cmd::register_command(StatementType::IncomeStatement),
+                        )
+                        .await;
+                    let _ = guild_id
+                        .create_command(
+                            &ctx.http,
+                            fundamentals_cmd::register_command(StatementType::BalanceSheet),
+                        )
+                        .await;
+                    let _ = guild_id
+                        .create_command(
+                            &ctx.http,
+                            fundamentals_cmd::register_command(StatementType::CashFlow),
+                        )
+                        .await;
+                    let _ = guild_id
+                        .create_command(&ctx.http, quotes_cmd::register_command())
+                        .await;
+                    let _ = guild_id
+                        .create_command(&ctx.http, holders_cmd::register_command())
+                        .await;
+                    let _ = guild_id
+                        .create_command(&ctx.http, news_cmd::register_command())
+                        .await;
+                    let _ = guild_id
+                        .create_command(&ctx.http, earnings_cmd::register_weekly_command())
+                        .await;
+                    let _ = guild_id
+                        .create_command(&ctx.http, earnings_cmd::register_daily_command())
+                        .await;
+                    let _ = guild_id
+                        .create_command(&ctx.http, earnings_cmd::register_after_daily_command())
+                        .await;
+                    info!("Guild commands registered for guild ID: {}", guild_id);
+                }
+                info!(
+                    "{} is connected. [DEV MODE] Guild commands registered instantly for {} server(s).",
+                    ready.user.name,
+                    guild_ids.len()
+                );
+            } else {
+                info!(
+                    "{} is connected. [DEV MODE] No GUILD_IDS found, falling back to global commands.",
+                    ready.user.name
+                );
+                register_global_commands(&ctx).await;
+            }
         } else {
-            // Fallback to global commands (takes up to 1 hour)
-            let _ = Command::create_global_command(&ctx.http, ping_command()).await;
-            let _ = Command::create_global_command(
-                &ctx.http,
-                fundamentals_cmd::register_command(StatementType::IncomeStatement),
-            )
-            .await;
-            let _ = Command::create_global_command(
-                &ctx.http,
-                fundamentals_cmd::register_command(StatementType::BalanceSheet),
-            )
-            .await;
-            let _ = Command::create_global_command(
-                &ctx.http,
-                fundamentals_cmd::register_command(StatementType::CashFlow),
-            )
-            .await;
-            let _ = Command::create_global_command(&ctx.http, quotes_cmd::register_command()).await;
-            let _ =
-                Command::create_global_command(&ctx.http, holders_cmd::register_command()).await;
-            let _ = Command::create_global_command(&ctx.http, news_cmd::register_command()).await;
-            let _ =
-                Command::create_global_command(&ctx.http, earnings_cmd::register_weekly_command())
-                    .await;
-            let _ =
-                Command::create_global_command(&ctx.http, earnings_cmd::register_daily_command())
-                    .await;
-            let _ = Command::create_global_command(
-                &ctx.http,
-                earnings_cmd::register_after_daily_command(),
-            )
-                    .await;
+            // Production: Register global commands (takes up to 1 hour)
+            register_global_commands(&ctx).await;
             info!(
-                "{} is connected. Global commands registered (may take up to 1 hour).",
+                "{} is connected. [PRODUCTION MODE] Global commands registered (may take up to 1 hour).",
                 ready.user.name
             );
         }
@@ -317,6 +309,38 @@ impl EventHandler for Handler {
             }
         }
     }
+}
+
+// Helper function to register all global commands
+async fn register_global_commands(ctx: &Context) {
+    let _ = Command::create_global_command(&ctx.http, ping_command()).await;
+    let _ = Command::create_global_command(
+        &ctx.http,
+        fundamentals_cmd::register_command(StatementType::IncomeStatement),
+    )
+    .await;
+    let _ = Command::create_global_command(
+        &ctx.http,
+        fundamentals_cmd::register_command(StatementType::BalanceSheet),
+    )
+    .await;
+    let _ = Command::create_global_command(
+        &ctx.http,
+        fundamentals_cmd::register_command(StatementType::CashFlow),
+    )
+    .await;
+    let _ = Command::create_global_command(&ctx.http, quotes_cmd::register_command()).await;
+    let _ = Command::create_global_command(&ctx.http, holders_cmd::register_command()).await;
+    let _ = Command::create_global_command(&ctx.http, news_cmd::register_command()).await;
+    let _ = Command::create_global_command(&ctx.http, earnings_cmd::register_weekly_command())
+        .await;
+    let _ = Command::create_global_command(&ctx.http, earnings_cmd::register_daily_command())
+        .await;
+    let _ = Command::create_global_command(
+        &ctx.http,
+        earnings_cmd::register_after_daily_command(),
+    )
+    .await;
 }
 
 #[tokio::main]

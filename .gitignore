@@ -1,3 +1,7 @@
 /target
 .env
 .env.production
+
+Lambda-bot/target
+Lambda-bot/.env
+Lambda-bot/.env.production
