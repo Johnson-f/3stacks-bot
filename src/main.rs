@@ -12,16 +12,16 @@ use serenity::all::{
 use serenity::{async_trait, model::gateway::Ready, prelude::*, Client};
 use tracing::info;
 
-use discord_bot::models::StatementType;
-use discord_bot::service::automation::{earnings, options_data};
-use discord_bot::service::caching::RedisCache;
-use discord_bot::service::command::earnings as earnings_cmd;
-use discord_bot::service::command::fundamentals as fundamentals_cmd;
-use discord_bot::service::command::holders as holders_cmd;
-use discord_bot::service::command::mention as mention_cmd;
-use discord_bot::service::command::news as news_cmd;
-use discord_bot::service::command::quotes as quotes_cmd;
-use discord_bot::service::finance::FinanceService;
+use stacks_bot::models::StatementType;
+use stacks_bot::service::automation::{earnings, options_data};
+use stacks_bot::service::caching::RedisCache;
+use stacks_bot::service::command::earnings as earnings_cmd;
+use stacks_bot::service::command::fundamentals as fundamentals_cmd;
+use stacks_bot::service::command::holders as holders_cmd;
+use stacks_bot::service::command::mention as mention_cmd;
+use stacks_bot::service::command::news as news_cmd;
+use stacks_bot::service::command::quotes as quotes_cmd;
+use stacks_bot::service::finance::FinanceService;
 
 struct Handler {
     finance: Arc<FinanceService>,

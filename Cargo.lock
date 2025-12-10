@@ -823,34 +823,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "discord-bot"
-version = "0.1.0"
-dependencies = [
- "ab_glyph",
- "anyhow",
- "base64 0.22.1",
- "chrono",
- "chrono-tz",
- "dotenv",
- "finance-query-core",
- "font-kit",
- "futures-util",
- "image",
- "imageproc",
- "once_cell",
- "redis",
- "reqwest 0.12.24",
- "serde",
- "serde_json",
- "serenity",
- "thiserror 2.0.17",
- "tokio",
- "tokio-tungstenite 0.28.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "displaydoc"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3563,6 +3535,34 @@ name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
+
+[[package]]
+name = "stacks-bot"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "chrono-tz",
+ "dotenv",
+ "finance-query-core",
+ "font-kit",
+ "futures-util",
+ "image",
+ "imageproc",
+ "once_cell",
+ "redis",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "serenity",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-tungstenite 0.28.0",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "static_assertions"
